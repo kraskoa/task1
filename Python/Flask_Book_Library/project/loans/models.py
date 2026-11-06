@@ -1,4 +1,9 @@
-from project import db , app
+from sqlalchemy.orm import validates
+
+from project import db, app
+from project.validators import (
+    validate_person_name, validate_book_name, validate_year_published, validate_book_type,
+)
 
 
 # Loan model
@@ -22,6 +27,26 @@ class Loan(db.Model):
         self.original_author = original_author
         self.original_year_published = original_year_published
         self.original_book_type = original_book_type
+
+    @validates('customer_name')
+    def _validate_customer_name(self, key, value):
+        return validate_person_name(value, 'Customer name')
+
+    @validates('book_name')
+    def _validate_book_name(self, key, value):
+        return validate_book_name(value)
+
+    @validates('original_author')
+    def _validate_original_author(self, key, value):
+        return validate_person_name(value, 'Author')
+
+    @validates('original_year_published')
+    def _validate_original_year_published(self, key, value):
+        return validate_year_published(value)
+
+    @validates('original_book_type')
+    def _validate_original_book_type(self, key, value):
+        return validate_book_type(value)
 
     def __repr__(self):
         return f"Customer: {self.customer_name}, Book: {self.book_name}, Loan Date: {self.loan_date}, Return Date: {self.return_date}"

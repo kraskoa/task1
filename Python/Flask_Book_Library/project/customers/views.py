@@ -1,6 +1,7 @@
 from flask import render_template, Blueprint, request, redirect, url_for, jsonify
 from project import db
 from project.customers.models import Customer
+from project.validators import ValidationError
 
 
 # Blueprint for customers
@@ -35,7 +36,12 @@ def create_customer():
         print('Invalid form data')
         return jsonify({'error': 'Invalid form data'}), 400
 
-    new_customer = Customer(name=data['name'], city=data['city'], age=data['age'])
+    try:
+        # Validation is performed by the Customer model (@validates) on construction
+        new_customer = Customer(name=data['name'], city=data['city'], age=data['age'])
+    except ValidationError as e:
+        print('Invalid customer data')
+        return jsonify({'error': str(e)}), 400
 
     try:
         # Add the new customer to the session and commit to save to the database
@@ -80,11 +86,14 @@ def edit_customer(customer_id):
         print('Customer not found')
         return jsonify({'error': 'Customer not found'}), 404
 
-    try:
-        # Get data from the request
-        data = request.form
+    # Get data from the request
+    data = request.form
+    if 'name' not in data or 'city' not in data or 'age' not in data:
+        print('Invalid form data')
+        return jsonify({'error': 'Invalid form data'}), 400
 
-        # Update customer details
+    try:
+        # Update customer details (validated by the Customer model on assignment)
         customer.name = data['name']
         customer.city = data['city']
         customer.age = data['age']
@@ -93,6 +102,10 @@ def edit_customer(customer_id):
         db.session.commit()
         print('Customer updated succesfully')
         return redirect(url_for('customers.list_customers'))
+    except ValidationError as e:
+        db.session.rollback()
+        print('Invalid customer data')
+        return jsonify({'error': str(e)}), 400
     except Exception as e:
         # Handle any exceptions
         db.session.rollback()
